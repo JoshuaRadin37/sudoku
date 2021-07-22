@@ -18,5 +18,4 @@ impl Button {
             on_click: Box::new(|| {}),
         }
     }
-
 }

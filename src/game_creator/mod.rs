@@ -15,6 +15,8 @@ pub use json_create_game::JSONLoader;
 mod byte_string_create_game;
 pub use byte_string_create_game::ByteStringLoader;
 
+mod random_create_game;
+
 /// Helper trait for generating games
 pub trait GameCreator {
     /// The error type if something goes wrong while generating a game

@@ -14,7 +14,7 @@ pub struct GameBoardController {
     /// Note mode
     pub note_mode: NoteMode,
     /// Set if a number should be highlighted
-    pub maybe_highlighted_number: Option<u8>
+    pub maybe_highlighted_number: Option<u8>,
 }
 
 /// The method that the controller inputs numbers in the game board
@@ -35,7 +35,7 @@ impl GameBoardController {
             selected_cell: None,
             cursor_pos: [0.0; 2],
             note_mode: NoteMode::Value,
-            maybe_highlighted_number: None
+            maybe_highlighted_number: None,
         }
     }
 
@@ -61,15 +61,22 @@ impl GameBoardController {
             }
         }
         if let Some(Button::Keyboard(key)) = e.press_args() {
-            match key  {
+            match key {
                 Key::V => self.note_mode = NoteMode::Value,
                 Key::D => self.note_mode = NoteMode::Deny,
                 Key::M => self.note_mode = NoteMode::Maybe,
                 Key::E => {
                     let string = self.game_board.as_byte_string();
                     println!("{}", string);
-                }
-                _ => { }
+                },
+                Key::A => self.game_board.auto_note(),
+                Key::C => self.game_board.clear_notes(),
+                Key::S => {
+                    let solutions  = self.game_board.solutions();
+                    println!("# of solutions: {}", solutions);
+                    self.game_board.solve();
+                } ,
+                _ => {}
             }
             if let Some(ind) = self.selected_cell {
                 match key {

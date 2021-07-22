@@ -3,7 +3,4 @@
 mod button;
 pub use button::Button;
 
-pub trait Interact {
-
-
-}
+pub trait Interact {}

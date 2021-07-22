@@ -9,6 +9,7 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 /// The size of the game board
 pub const SIZE: usize = 9;
 
+#[derive(Clone)]
 /// Stores game board information
 pub struct GameBoard {
     /// Stores the contents of the cells.
@@ -334,7 +335,8 @@ pub enum CellValue {
 }
 
 impl CellValue {
-    fn as_value(&self) -> Option<u8> {
+    /// Gets the value of the cell, if it has a concrete one.
+    pub fn as_value(&self) -> Option<u8> {
         match self {
             &CellValue::Preset(v) => Some(v),
             &CellValue::Value(v) => Some(v),
@@ -373,7 +375,7 @@ impl GameBoard {
     }
 
     /// Gets the character at cell location
-    pub fn cell_value(&self, ind: (usize, usize)) -> &CellValue {
+    pub fn cell_value(&self, ind: CellIndex) -> &CellValue {
         &self.cells[ind.1][ind.0]
     }
 
@@ -619,22 +621,123 @@ impl GameBoard {
 
     /// Automatically fully notes the game board
     pub fn auto_note(&mut self) {
+        self.clear_notes();
+
         for row in 0usize..9 {
             for column in 0usize..9 {
                 if !self.is_valid() {
                     return;
                 }
-                if let None = self.cell_value((column, row)).as_value() {
+                let cell_index = (column, row);
+                if let None = self.cell_value(cell_index).as_value() {
+                    let mut valid: Vec<u8> = vec![];
                     for val in 1u8..=9 {
-
-
-
+                        let old = self.cells[row][column];
+                        self.cells[row][column] = CellValue::Value(val);
+                        let affected = AffectedComponents::new(self, cell_index);
+                        if affected.house().is_valid() && affected.row().is_valid() && affected.column().is_valid() {
+                            valid.push(val);
+                        }
+                        self.cells[row][column] = old;
+                    }
+                    for value in valid {
+                        self.set(cell_index, &NoteMode::Maybe, value);
                     }
                 }
-
             }
         }
     }
+
+    /// Clears all notes
+    pub fn clear_notes(&mut self) {
+        for row in 0usize..9 {
+            for column in 0usize..9 {
+                if let CellValue::Notes {..} = self.cell_value((column, row)) {
+                    self.reset((column, row));
+                }
+            }
+        }
+    }
+
+    /// Solves the board. Returns whether the solve was successful
+    pub fn solve(&mut self) -> bool {
+        for row in 0usize..9 {
+            for column in 0usize..9 {
+
+                let cell_index = (column, row);
+                if let None = self.cell_value(cell_index).as_value() {
+                    let mut viable = false;
+                    for val in 1u8..=9 {
+                        self.cells[row][column] = CellValue::Value(val);
+                        if self.is_valid() {
+                            let mut next = self.clone();
+                            if next.solve() {
+                                *self = next;
+                                viable = true;
+                                break;
+                            }
+                        }
+                    }
+                    if !viable {
+                        return false;
+                    }
+
+                }
+            }
+        }
+
+        self.is_valid() && self.is_complete()
+    }
+
+
+    /// Calculates the number of solutions for the given board
+    pub fn solutions(&self) -> usize {
+        let mut counter = 1;
+        if self.solutions_helper(&mut counter, 0, 0) {
+            counter
+        } else {
+            0
+        }
+    }
+
+    fn solutions_helper(&self, counter: &mut usize, start_row: usize, start_column: usize) -> bool {
+        let mut cells = 0;
+        let mut explored = false;
+        for row in start_row..9 {
+            for column in start_column..9 {
+
+                let cell_index = (column, row);
+                if let None = self.cell_value(cell_index).as_value() {
+                    explored = true;
+                    let mut viable = false;
+                    for val in 1u8..=9 {
+                        let mut next = self.clone();
+                        next.cells[row][column] = CellValue::Value(val);
+                        if next.is_valid() {
+                            if next.solutions_helper(counter, row, column) {
+                                cells += 1;
+                                viable = true;
+                            }
+                        }
+                    }
+                    if !viable {
+                        return false;
+                    }
+
+                }
+            }
+        }
+
+        if cells > 0 {
+            *counter += cells - 1;
+        }
+        if explored {
+            cells > 0
+        } else {
+            true
+        }
+    }
+
 }
 
 impl SudokuCorrectness for GameBoard {
@@ -700,7 +803,7 @@ impl<'a> AffectedComponentsMut<'a> {
     /// The affected house
     pub fn house(self) -> HouseMut<'a> {
         self.board
-            .house_mut(self.index.0 / 3, self.index.1 / 3)
+            .house_mut(self.index.1 / 3, self.index.0 / 3)
             .unwrap()
     }
 }
@@ -730,7 +833,7 @@ impl<'a> AffectedComponents<'a> {
     /// The affected house
     pub fn house(&self) -> House<'a> {
         self.board
-            .house(self.index.0 / 3, self.index.1 / 3)
+            .house(self.index.1 / 3, self.index.0 / 3)
             .unwrap()
     }
 }

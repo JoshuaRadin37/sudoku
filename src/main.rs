@@ -7,10 +7,7 @@ extern crate serde;
 #[macro_use]
 extern crate bitfield;
 
-use piston::{
-    event_loop::EventLoop, EventSettings, Events, RenderEvent,
-    WindowSettings,
-};
+use piston::{event_loop::EventLoop, EventSettings, Events, RenderEvent, WindowSettings};
 
 mod game_board;
 pub use game_board::*;
@@ -22,22 +19,19 @@ mod game_board_view;
 pub use game_board_view::{GameBoardView, GameBoardViewSettings};
 
 mod game_settings;
-use crate::game_creator::{GameCreator, ByteStringLoader};
+use crate::game_creator::{ByteStringLoader, GameCreator};
+use clap::{App, Arg};
 pub use game_settings::GameSettings;
 use glutin_window::{GlutinWindow, OpenGL};
 use opengl_graphics::{Filter, GlGraphics, GlyphCache, TextureSettings};
-use clap::{App, Arg};
 
 pub mod game_creator;
 pub mod validity;
 
+
 mod ui;
 
 fn main() {
-
-
-
-
     let opengl = OpenGL::V3_2;
     let settings = WindowSettings::new("Sudoku", [512; 2])
         .graphics_api(opengl)
@@ -51,7 +45,6 @@ fn main() {
     let ref mut glyph_cache = GlyphCache::new("assets/FiraSans-Regular.ttf", (), texture_settings)
         .expect("Could not load font");
 
-
     let board: GameBoard;
 
     let app = App::new("Sudoku")
@@ -60,17 +53,18 @@ fn main() {
                 .help("Uses a byte string to create a sudoku board")
                 .takes_value(true)
                 .short("b")
-                .long("byte")
+                .long("byte"),
         )
         .get_matches();
 
     if let Some(byte_string) = app.value_of("byte_string") {
         let loader = ByteStringLoader::from_string(byte_string);
-        board = loader.into_game().expect("Could not create game from byte string");
+        board = loader
+            .into_game()
+            .expect("Could not create game from byte string");
     } else {
         board = GameBoard::new();
     }
-
 
     let game_settings = GameSettings::new();
 

@@ -68,7 +68,7 @@ impl GameBoardViewSettings {
             preset_text_color: [1.0, 1.0, 1.0, 1.0],
             preset_background_color: from_rgba(94, 34, 107, 1.0),
             error_highlight: [1.0, 0.0, 0.0, 0.3],
-            highlight: from_rgba(255, 249, 66, 1.0)
+            highlight: from_rgba(255, 249, 66, 1.0),
         }
     }
 }
@@ -81,7 +81,6 @@ fn from_rgba(r: u8, g: u8, b: u8, a: f32) -> Color {
 pub struct GameBoardView {
     /// Stores game board view settings.
     pub settings: GameBoardViewSettings,
-
 }
 
 impl GameBoardView {
@@ -253,8 +252,7 @@ impl GameBoardView {
                                                 } else {
                                                     self.settings.maybe_text_color
                                                 }
-
-                                            },
+                                            }
                                             NoteStatus::Deny => self.settings.deny_text_color,
                                         });
 
