@@ -605,7 +605,7 @@ impl GameBoard {
                     let row = row_n + 1;
                     let val = value + 1;
                     let high = (0b01000000 | (col << 2) | (row >> 2)) as u8;
-                    let low = 0b01000000 | (row << 4 & 0b110000) as u8 | (val >> 2);
+                    let low = 0b01000000 | ((row << 4) & 0b110000) as u8 | (val);
                     buffer.push(high);
                     buffer.push(low);
                 }
@@ -615,6 +615,25 @@ impl GameBoard {
         buffer.push(0b01000000);
         buffer.push(0b01000000);
         String::from_utf8(buffer).unwrap()
+    }
+
+    /// Automatically fully notes the game board
+    pub fn auto_note(&mut self) {
+        for row in 0usize..9 {
+            for column in 0usize..9 {
+                if !self.is_valid() {
+                    return;
+                }
+                if let None = self.cell_value((column, row)).as_value() {
+                    for val in 1u8..=9 {
+
+
+
+                    }
+                }
+
+            }
+        }
     }
 }
 
@@ -682,6 +701,36 @@ impl<'a> AffectedComponentsMut<'a> {
     pub fn house(self) -> HouseMut<'a> {
         self.board
             .house_mut(self.index.0 / 3, self.index.1 / 3)
+            .unwrap()
+    }
+}
+
+/// A convenience struct to get the row, column, and house "seen" by a cell at a given index
+pub struct AffectedComponents<'a> {
+    index: CellIndex,
+    board: &'a GameBoard,
+}
+
+impl<'a> AffectedComponents<'a> {
+    /// Creates a new instance
+    pub fn new(board: &'a GameBoard, index: CellIndex) -> Self {
+        AffectedComponents { index, board }
+    }
+
+    /// The affected row
+    pub fn row(&self) -> Row<'a> {
+        self.board.row(self.index.1).unwrap()
+    }
+
+    /// The affected column
+    pub fn column(&self) -> Column<'a> {
+        self.board.column(self.index.0).unwrap()
+    }
+
+    /// The affected house
+    pub fn house(&self) -> House<'a> {
+        self.board
+            .house(self.index.0 / 3, self.index.1 / 3)
             .unwrap()
     }
 }

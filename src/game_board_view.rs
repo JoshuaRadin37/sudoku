@@ -42,6 +42,8 @@ pub struct GameBoardViewSettings {
     pub preset_background_color: Color,
     /// The error color highlight
     pub error_highlight: Color,
+    /// Highlight a number
+    pub highlight: Color,
 }
 
 impl GameBoardViewSettings {
@@ -66,6 +68,7 @@ impl GameBoardViewSettings {
             preset_text_color: [1.0, 1.0, 1.0, 1.0],
             preset_background_color: from_rgba(94, 34, 107, 1.0),
             error_highlight: [1.0, 0.0, 0.0, 0.3],
+            highlight: from_rgba(255, 249, 66, 1.0)
         }
     }
 }
@@ -78,6 +81,7 @@ fn from_rgba(r: u8, g: u8, b: u8, a: f32) -> Color {
 pub struct GameBoardView {
     /// Stores game board view settings.
     pub settings: GameBoardViewSettings,
+
 }
 
 impl GameBoardView {
@@ -132,6 +136,7 @@ impl GameBoardView {
 
         let text_image = Image::new_color(settings.text_color);
         let preset_text_image = Image::new_color(settings.preset_text_color);
+        let highlighted_text_image = Image::new_color(settings.highlight);
         let cell_size = settings.size / 9.0;
         for j in 0..9 {
             for i in 0..9 {
@@ -165,12 +170,21 @@ impl GameBoardView {
                             let ch_x = pos[0] + character.left();
                             let ch_y = pos[1] - character.top();
 
-                            let text_image = preset_text_image.src_rect([
-                                character.atlas_offset[0],
-                                character.atlas_offset[1],
-                                character.atlas_size[0],
-                                character.atlas_size[1],
-                            ]);
+                            let text_image = if Some(*val) == controller.maybe_highlighted_number {
+                                highlighted_text_image.src_rect([
+                                    character.atlas_offset[0],
+                                    character.atlas_offset[1],
+                                    character.atlas_size[0],
+                                    character.atlas_size[1],
+                                ])
+                            } else {
+                                preset_text_image.src_rect([
+                                    character.atlas_offset[0],
+                                    character.atlas_offset[1],
+                                    character.atlas_size[0],
+                                    character.atlas_size[1],
+                                ])
+                            };
 
                             text_image.draw(
                                 character.texture,
@@ -186,12 +200,21 @@ impl GameBoardView {
                             let ch_x = pos[0] + character.left();
                             let ch_y = pos[1] - character.top();
 
-                            let text_image = text_image.src_rect([
-                                character.atlas_offset[0],
-                                character.atlas_offset[1],
-                                character.atlas_size[0],
-                                character.atlas_size[1],
-                            ]);
+                            let text_image = if Some(*val) == controller.maybe_highlighted_number {
+                                highlighted_text_image.src_rect([
+                                    character.atlas_offset[0],
+                                    character.atlas_offset[1],
+                                    character.atlas_size[0],
+                                    character.atlas_size[1],
+                                ])
+                            } else {
+                                text_image.src_rect([
+                                    character.atlas_offset[0],
+                                    character.atlas_offset[1],
+                                    character.atlas_size[0],
+                                    character.atlas_size[1],
+                                ])
+                            };
 
                             text_image.draw(
                                 character.texture,
@@ -224,7 +247,14 @@ impl GameBoardView {
                                         ]);
 
                                         text_image.color = Some(match status {
-                                            NoteStatus::Maybe => self.settings.maybe_text_color,
+                                            NoteStatus::Maybe => {
+                                                if Some(v) == controller.maybe_highlighted_number {
+                                                    self.settings.highlight
+                                                } else {
+                                                    self.settings.maybe_text_color
+                                                }
+
+                                            },
                                             NoteStatus::Deny => self.settings.deny_text_color,
                                         });
 

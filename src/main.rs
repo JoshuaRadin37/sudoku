@@ -8,7 +8,7 @@ extern crate serde;
 extern crate bitfield;
 
 use piston::{
-    event_loop::EventLoop, EventSettings, Events, RenderEvent, Size, UpdateEvent, Window,
+    event_loop::EventLoop, EventSettings, Events, RenderEvent,
     WindowSettings,
 };
 
@@ -22,12 +22,10 @@ mod game_board_view;
 pub use game_board_view::{GameBoardView, GameBoardViewSettings};
 
 mod game_settings;
-use crate::game_creator::{GameCreator, JSONLoader, ByteStringLoader};
+use crate::game_creator::{GameCreator, ByteStringLoader};
 pub use game_settings::GameSettings;
 use glutin_window::{GlutinWindow, OpenGL};
-use graphics::CharacterCache;
 use opengl_graphics::{Filter, GlGraphics, GlyphCache, TextureSettings};
-use std::env::args;
 use clap::{App, Arg};
 
 pub mod game_creator;
@@ -53,17 +51,6 @@ fn main() {
     let ref mut glyph_cache = GlyphCache::new("assets/FiraSans-Regular.ttf", (), texture_settings)
         .expect("Could not load font");
 
-    let json_loader = JSONLoader::from_string(
-        r#"
-        [
-            {
-                "x": 0,
-                "y": 0,
-                "val": 1
-            }
-        ]
-    "#,
-    );
 
     let board: GameBoard;
 

@@ -13,6 +13,8 @@ pub struct GameBoardController {
     cursor_pos: [f64; 2],
     /// Note mode
     pub note_mode: NoteMode,
+    /// Set if a number should be highlighted
+    pub maybe_highlighted_number: Option<u8>
 }
 
 /// The method that the controller inputs numbers in the game board
@@ -33,6 +35,7 @@ impl GameBoardController {
             selected_cell: None,
             cursor_pos: [0.0; 2],
             note_mode: NoteMode::Value,
+            maybe_highlighted_number: None
         }
     }
 
@@ -53,9 +56,21 @@ impl GameBoardController {
                 let cell_x = (x / size * 9.0) as usize;
                 let cell_y = (y / size * 9.0) as usize;
                 self.selected_cell = Some((cell_x, cell_y));
+            } else {
+                self.selected_cell = None;
             }
         }
         if let Some(Button::Keyboard(key)) = e.press_args() {
+            match key  {
+                Key::V => self.note_mode = NoteMode::Value,
+                Key::D => self.note_mode = NoteMode::Deny,
+                Key::M => self.note_mode = NoteMode::Maybe,
+                Key::E => {
+                    let string = self.game_board.as_byte_string();
+                    println!("{}", string);
+                }
+                _ => { }
+            }
             if let Some(ind) = self.selected_cell {
                 match key {
                     Key::D1 => self.game_board.set(ind, &self.note_mode, 1),
@@ -68,14 +83,24 @@ impl GameBoardController {
                     Key::D8 => self.game_board.set(ind, &self.note_mode, 8),
                     Key::D9 => self.game_board.set(ind, &self.note_mode, 9),
                     Key::Delete | Key::Backspace => self.game_board.reset(ind),
-                    Key::V => self.note_mode = NoteMode::Value,
-                    Key::D => self.note_mode = NoteMode::Deny,
-                    Key::M => self.note_mode = NoteMode::Maybe,
-                    Key::E => {
-                        let string = self.game_board.as_byte_string();
-                        println!("{}", string);
-                    }
                     _ => {}
+                }
+                self.maybe_highlighted_number = None;
+                //self.selected_cell = None;
+            } else {
+                match key {
+                    Key::D1 => self.maybe_highlighted_number = Some(1),
+                    Key::D2 => self.maybe_highlighted_number = Some(2),
+                    Key::D3 => self.maybe_highlighted_number = Some(3),
+                    Key::D4 => self.maybe_highlighted_number = Some(4),
+                    Key::D5 => self.maybe_highlighted_number = Some(5),
+                    Key::D6 => self.maybe_highlighted_number = Some(6),
+                    Key::D7 => self.maybe_highlighted_number = Some(7),
+                    Key::D8 => self.maybe_highlighted_number = Some(8),
+                    Key::D9 => self.maybe_highlighted_number = Some(9),
+                    _ => {
+                        self.maybe_highlighted_number = None;
+                    }
                 }
             }
         }
