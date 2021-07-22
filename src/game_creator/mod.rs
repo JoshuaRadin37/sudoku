@@ -16,6 +16,7 @@ mod byte_string_create_game;
 pub use byte_string_create_game::ByteStringLoader;
 
 mod random_create_game;
+pub use random_create_game::{RandomCreatorError, RandomLoader};
 
 /// Helper trait for generating games
 pub trait GameCreator {

@@ -19,7 +19,7 @@ mod game_board_view;
 pub use game_board_view::{GameBoardView, GameBoardViewSettings};
 
 mod game_settings;
-use crate::game_creator::{ByteStringLoader, GameCreator};
+use crate::game_creator::{ByteStringLoader, GameCreator, RandomLoader};
 use clap::{App, Arg};
 pub use game_settings::GameSettings;
 use glutin_window::{GlutinWindow, OpenGL};
@@ -27,7 +27,6 @@ use opengl_graphics::{Filter, GlGraphics, GlyphCache, TextureSettings};
 
 pub mod game_creator;
 pub mod validity;
-
 
 mod ui;
 
@@ -55,6 +54,15 @@ fn main() {
                 .short("b")
                 .long("byte"),
         )
+        .arg(
+            Arg::with_name("random")
+                .help("Randomly create a board")
+                .short("r")
+                .long("rand")
+                .min_values(0)
+                .max_values(1)
+                .conflicts_with_all(&["byte_string"])
+        )
         .get_matches();
 
     if let Some(byte_string) = app.value_of("byte_string") {
@@ -62,6 +70,16 @@ fn main() {
         board = loader
             .into_game()
             .expect("Could not create game from byte string");
+    } else if app.is_present("random") {
+        board = match app.value_of("random") {
+            Some(v) => {
+                let num: u64 = v.parse().expect("Give seed is not an integer");
+                RandomLoader::from_seed(num).into_game().expect("Could not create a random game")
+            },
+            None => {
+                RandomLoader::new().into_game().expect("Could not create a random game")
+            }
+        };
     } else {
         board = GameBoard::new();
     }

@@ -68,14 +68,19 @@ impl GameBoardController {
                 Key::E => {
                     let string = self.game_board.as_byte_string();
                     println!("{}", string);
-                },
+                }
                 Key::A => self.game_board.auto_note(),
                 Key::C => self.game_board.clear_notes(),
                 Key::S => {
-                    let solutions  = self.game_board.solutions();
-                    println!("# of solutions: {}", solutions);
-                    self.game_board.solve();
-                } ,
+                    if let Some(solutions) = self.game_board.solutions() {
+                        println!("# of solutions: {}", solutions.num_solutions());
+                        let solution = solutions.solution();
+                        self.game_board = solution.clone();
+                    } else {
+                        println!("Could not solve the sudoku puzzle")
+                    }
+                    //self.game_board.solve();
+                }
                 _ => {}
             }
             if let Some(ind) = self.selected_cell {

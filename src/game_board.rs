@@ -1,7 +1,7 @@
 //! Game board logic
 
 use crate::game_board_controller::NoteMode;
-use crate::validity::SudokuCorrectness;
+use crate::validity::{SudokuCorrectness, SolutionsTree};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
@@ -344,6 +344,22 @@ impl CellValue {
             CellValue::Empty => None,
         }
     }
+
+    /// Gets the values that this cell could be
+    pub fn maybe_values(&self) -> Option<Vec<u8>> {
+        match self {
+            CellValue::Notes { status } => {
+                let mut ret = vec![];
+                for val_status in status.iter().enumerate().map(|(i, s)| (i as u8 + 1, s)) {
+                    if let (val, Some(NoteStatus::Maybe)) = val_status {
+                        ret.push(val);
+                    }
+                }
+                Some(ret)
+            }
+            _ => None
+        }
+    }
 }
 
 /// Whether or not this note is number is maybe or deny
@@ -635,7 +651,10 @@ impl GameBoard {
                         let old = self.cells[row][column];
                         self.cells[row][column] = CellValue::Value(val);
                         let affected = AffectedComponents::new(self, cell_index);
-                        if affected.house().is_valid() && affected.row().is_valid() && affected.column().is_valid() {
+                        if affected.house().is_valid()
+                            && affected.row().is_valid()
+                            && affected.column().is_valid()
+                        {
                             valid.push(val);
                         }
                         self.cells[row][column] = old;
@@ -652,7 +671,7 @@ impl GameBoard {
     pub fn clear_notes(&mut self) {
         for row in 0usize..9 {
             for column in 0usize..9 {
-                if let CellValue::Notes {..} = self.cell_value((column, row)) {
+                if let CellValue::Notes { .. } = self.cell_value((column, row)) {
                     self.reset((column, row));
                 }
             }
@@ -663,7 +682,6 @@ impl GameBoard {
     pub fn solve(&mut self) -> bool {
         for row in 0usize..9 {
             for column in 0usize..9 {
-
                 let cell_index = (column, row);
                 if let None = self.cell_value(cell_index).as_value() {
                     let mut viable = false;
@@ -681,7 +699,6 @@ impl GameBoard {
                     if !viable {
                         return false;
                     }
-
                 }
             }
         }
@@ -689,53 +706,9 @@ impl GameBoard {
         self.is_valid() && self.is_complete()
     }
 
-
-    /// Calculates the number of solutions for the given board
-    pub fn solutions(&self) -> usize {
-        let mut counter = 1;
-        if self.solutions_helper(&mut counter, 0, 0) {
-            counter
-        } else {
-            0
-        }
-    }
-
-    fn solutions_helper(&self, counter: &mut usize, start_row: usize, start_column: usize) -> bool {
-        let mut cells = 0;
-        let mut explored = false;
-        for row in start_row..9 {
-            for column in start_column..9 {
-
-                let cell_index = (column, row);
-                if let None = self.cell_value(cell_index).as_value() {
-                    explored = true;
-                    let mut viable = false;
-                    for val in 1u8..=9 {
-                        let mut next = self.clone();
-                        next.cells[row][column] = CellValue::Value(val);
-                        if next.is_valid() {
-                            if next.solutions_helper(counter, row, column) {
-                                cells += 1;
-                                viable = true;
-                            }
-                        }
-                    }
-                    if !viable {
-                        return false;
-                    }
-
-                }
-            }
-        }
-
-        if cells > 0 {
-            *counter += cells - 1;
-        }
-        if explored {
-            cells > 0
-        } else {
-            true
-        }
+    /// Returns a solutions tree for the given board
+    pub fn solutions(&self) -> Option<SolutionsTree> {
+        SolutionsTree::solve(self)
     }
 
 }
@@ -775,6 +748,34 @@ impl SudokuCorrectness for GameBoard {
             .into_iter()
             .flat_map(|row| row.indices_and_values())
             .collect()
+    }
+}
+
+impl Index<usize> for GameBoard {
+    type Output = [CellValue; 9];
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.cells[index]
+    }
+}
+
+impl IndexMut<usize> for GameBoard {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.cells[index]
+    }
+}
+
+impl Index<CellIndex> for GameBoard {
+    type Output = CellValue;
+
+    fn index(&self, index: CellIndex) -> &Self::Output {
+        &self[index.1][index.0]
+    }
+}
+
+impl IndexMut<CellIndex> for GameBoard {
+    fn index_mut(&mut self, index: CellIndex) -> &mut Self::Output {
+        &mut self[index.1][index.0]
     }
 }
 
@@ -835,5 +836,10 @@ impl<'a> AffectedComponents<'a> {
         self.board
             .house(self.index.1 / 3, self.index.0 / 3)
             .unwrap()
+    }
+
+    /// Checks whether all the components are valid
+    pub fn is_valid(&self) -> bool {
+        self.row().is_valid() && self.column().is_valid() && self.house().is_valid()
     }
 }
