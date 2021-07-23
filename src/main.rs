@@ -3,47 +3,33 @@
 //! A Sudoku game
 
 #[macro_use]
-extern crate serde;
-#[macro_use]
 extern crate bitfield;
+#[macro_use]
+extern crate serde;
 
-use piston::{event_loop::EventLoop, EventSettings, Events, RenderEvent, WindowSettings};
-
-mod game_board;
-pub use game_board::*;
-
-mod game_board_controller;
-pub use game_board_controller::GameBoardController;
-
-mod game_board_view;
-pub use game_board_view::{GameBoardView, GameBoardViewSettings};
-
-mod game_settings;
-use crate::game_creator::{ByteStringLoader, GameCreator, RandomLoader};
 use clap::{App, Arg};
-pub use game_settings::GameSettings;
 use glutin_window::{GlutinWindow, OpenGL};
 use opengl_graphics::{Filter, GlGraphics, GlyphCache, TextureSettings};
+use piston::{event_loop::EventLoop, Events, EventSettings, RenderEvent, WindowSettings};
 
+pub use game_board::*;
+pub use game_board_controller::GameBoardController;
+pub use game_board_view::{GameBoardView, GameBoardViewSettings};
+pub use game_settings::GameSettings;
+
+use crate::game_creator::{ByteStringLoader, GameCreator, RandomLoader};
+
+mod game_board;
+mod game_board_controller;
+mod game_board_view;
+mod game_settings;
 pub mod game_creator;
 pub mod validity;
+pub mod advanced_solver;
 
-mod ui;
+
 
 fn main() {
-    let opengl = OpenGL::V3_2;
-    let settings = WindowSettings::new("Sudoku", [512; 2])
-        .graphics_api(opengl)
-        .exit_on_esc(true);
-    let mut window: GlutinWindow = settings.build().expect("Could not make window");
-
-    let mut events = Events::new(EventSettings::new().lazy(true));
-    let mut gl = GlGraphics::new(opengl);
-
-    let texture_settings = TextureSettings::new().filter(Filter::Nearest);
-    let ref mut glyph_cache = GlyphCache::new("assets/FiraSans-Regular.ttf", (), texture_settings)
-        .expect("Could not load font");
-
     let board: GameBoard;
 
     let app = App::new("Sudoku")
@@ -61,7 +47,7 @@ fn main() {
                 .long("rand")
                 .min_values(0)
                 .max_values(1)
-                .conflicts_with_all(&["byte_string"])
+                .conflicts_with_all(&["byte_string"]),
         )
         .get_matches();
 
@@ -74,15 +60,30 @@ fn main() {
         board = match app.value_of("random") {
             Some(v) => {
                 let num: u64 = v.parse().expect("Give seed is not an integer");
-                RandomLoader::from_seed(num).into_game().expect("Could not create a random game")
-            },
-            None => {
-                RandomLoader::new().into_game().expect("Could not create a random game")
+                RandomLoader::from_seed(num)
+                    .into_game()
+                    .expect("Could not create a random game")
             }
+            None => RandomLoader::new()
+                .into_game()
+                .expect("Could not create a random game"),
         };
     } else {
         board = GameBoard::new();
     }
+
+    let opengl = OpenGL::V3_2;
+    let settings = WindowSettings::new("Sudoku", [512; 2])
+        .graphics_api(opengl)
+        .exit_on_esc(true);
+    let mut window: GlutinWindow = settings.build().expect("Could not make window");
+
+    let mut events = Events::new(EventSettings::new().lazy(true));
+    let mut gl = GlGraphics::new(opengl);
+
+    let texture_settings = TextureSettings::new().filter(Filter::Nearest);
+    let ref mut glyph_cache = GlyphCache::new("assets/FiraSans-Regular.ttf", (), texture_settings)
+        .expect("Could not load font");
 
     let game_settings = GameSettings::new();
 

@@ -3,6 +3,8 @@
 use piston::input::GenericEvent;
 
 use crate::GameBoard;
+use crate::advanced_solver::{Solver, Solution};
+use std::time::Duration;
 
 /// Handles events for the game board
 pub struct GameBoardController {
@@ -80,6 +82,21 @@ impl GameBoardController {
                         println!("Could not solve the sudoku puzzle")
                     }
                     //self.game_board.solve();
+                },
+                Key::T => {
+                    println!("Using technique solver");
+                    let solver = Solver::new(Duration::from_secs(2));
+                    match solver.solve(&self.game_board) {
+
+                        Ok(solution) => {
+                            println!("Solution found. Points = {}", solution.points);
+                            self.game_board = solution.solved_board;
+                        }
+                        Err(board) => {
+                            println!("Could not solve the board using known techniques. Applying techniques to board...");
+                            self.game_board = board;
+                        }
+                    }
                 }
                 _ => {}
             }

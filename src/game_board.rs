@@ -1,7 +1,7 @@
 //! Game board logic
 
 use crate::game_board_controller::NoteMode;
-use crate::validity::{SudokuCorrectness, SolutionsTree};
+use crate::validity::{SolutionsTree, SudokuCorrectness};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
@@ -318,7 +318,7 @@ impl SudokuCorrectness for HouseMut<'_> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 /// The possible values that a cell can have
 pub enum CellValue {
     /// A value present at the beginning of a sudoku game. Can not be changed
@@ -357,13 +357,25 @@ impl CellValue {
                 }
                 Some(ret)
             }
-            _ => None
+            _ => None,
+        }
+    }
+
+    /// If this cell is this value or it's set to may be this value.
+    pub fn is_or_maybe(&self, val: u8) -> bool {
+        match self {
+            CellValue::Preset(v) => { *v == val }
+            CellValue::Value(v) => { *v == val }
+            CellValue::Notes { status } => {
+                status[(val - 1) as usize] == Some(NoteStatus::Maybe)
+            }
+            CellValue::Empty => { false }
         }
     }
 }
 
 /// Whether or not this note is number is maybe or deny
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum NoteStatus {
     /// This cell can be this value
     Maybe,
@@ -711,6 +723,59 @@ impl GameBoard {
         SolutionsTree::solve(self)
     }
 
+    pub(crate) fn swap_rows(&mut self, row1: usize, row2: usize) {
+        let temp = self.cells[row1];
+        self.cells[row1] = self.cells[row2];
+        self.cells[row2] = temp;
+    }
+
+    pub(crate) fn swap_columns(&mut self, col1: usize, col2: usize) {
+        for row in 0usize..9 {
+            let temp = self[row][col1];
+            self[row][col1] = self[row][col2];
+            self[row][col2] = temp;
+        }
+    }
+
+    /// Iterates the [CellIndex]s of the cells that don't have a value set by either containing notes
+    /// or being empty
+    ///
+    /// [CellIndex]: crate::game_board::CellIndex
+    pub fn iter_unset(&self) -> impl IntoIterator<Item=CellIndex> {
+
+        let vector: Vec<_> = (0usize..9).into_iter()
+            .flat_map(
+                move |row|
+                (0usize..9).into_iter()
+                    .filter_map(
+                        move |col| {
+                            let index = (col, row);
+                            match &self[index] {
+                                CellValue::Preset(_) => {
+                                    None
+                                }
+                                CellValue::Value(_) => {
+                                    None
+                                }
+                                CellValue::Notes { .. } => {
+                                    Some(index)
+                                }
+                                CellValue::Empty => {
+                                    Some(index)
+                                }
+                            }
+                        }
+                    )
+            )
+            .collect();
+        vector
+    }
+
+    /// Checks if the boards is completely filled and valid
+    #[inline]
+    pub fn is_victory(&self) -> bool {
+        self.is_valid() && self.is_complete()
+    }
 }
 
 impl SudokuCorrectness for GameBoard {
@@ -776,6 +841,23 @@ impl Index<CellIndex> for GameBoard {
 impl IndexMut<CellIndex> for GameBoard {
     fn index_mut(&mut self, index: CellIndex) -> &mut Self::Output {
         &mut self[index.1][index.0]
+    }
+}
+
+impl<'a> IntoIterator for &'a GameBoard {
+    type Item = &'a CellValue;
+    type IntoIter = <Vec<&'a CellValue> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut ret = Vec::new();
+
+        for row in &self.cells {
+            for cell in row {
+                ret.push(cell);
+            }
+        }
+
+        ret.into_iter()
     }
 }
 
