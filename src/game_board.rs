@@ -1,7 +1,7 @@
 //! Game board logic
 
 use crate::game_board_controller::NoteMode;
-use crate::validity::{SolutionsTree, SudokuCorrectness};
+use crate::validity::{SolutionsTree, SudokuCorrectness, SudokuCorrectnessMut};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
@@ -40,17 +40,11 @@ impl<'a> Deref for Column<'a> {
 }
 
 impl SudokuCorrectness for Column<'_> {
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)> {
         self.cells
             .iter()
             .enumerate()
-            .filter_map(|(index, cell)| {
-                if let Some(value) = cell.as_value() {
-                    Some(((self.col_n, index), value))
-                } else {
-                    None
-                }
-            })
+            .map(|(index, &cell)| ((self.col_n, index), cell))
             .collect()
     }
 }
@@ -103,16 +97,26 @@ impl IndexMut<usize> for ColumnMut<'_> {
 }
 
 impl SudokuCorrectness for ColumnMut<'_> {
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
-        let mut ret = vec![];
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)> {
+        let col_n = self.col_n;
+        self.board
+            .cells
+            .iter()
+            .enumerate()
+            .map(|(index, row)| ((col_n, index), &row[col_n]))
+            .collect()
+    }
+}
 
-        for i in 0..9 {
-            if let Some(value) = self.cell(i).unwrap().as_value() {
-                ret.push(((self.col_n, i), value));
-            }
-        }
-
-        ret
+impl SudokuCorrectnessMut for ColumnMut<'_> {
+    fn indices_and_cells_mut(&mut self) -> Vec<(CellIndex, &mut CellValue)> {
+        let col_n = self.col_n;
+        self.board
+            .cells
+            .iter_mut()
+            .enumerate()
+            .map(|(index, row)| ((col_n, index), &mut row[col_n]))
+            .collect()
     }
 }
 
@@ -132,17 +136,11 @@ impl Deref for Row<'_> {
 }
 
 impl SudokuCorrectness for Row<'_> {
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)> {
         self.cells
             .iter()
             .enumerate()
-            .filter_map(|(index, cell)| {
-                if let Some(value) = cell.as_value() {
-                    Some(((index, self.row_n), value))
-                } else {
-                    None
-                }
-            })
+            .map(|(index, cell)| ((index, self.row_n), cell))
             .collect()
     }
 }
@@ -179,17 +177,22 @@ impl DerefMut for RowMut<'_> {
 }
 
 impl SudokuCorrectness for RowMut<'_> {
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)> {
         self.cells
             .iter()
             .enumerate()
-            .filter_map(|(index, cell)| {
-                if let Some(value) = cell.as_value() {
-                    Some(((index, self.row_n), value))
-                } else {
-                    None
-                }
-            })
+            .map(|(index, cell)| ((index, self.row_n), cell))
+            .collect()
+    }
+}
+
+impl SudokuCorrectnessMut for RowMut<'_> {
+    fn indices_and_cells_mut(&mut self) -> Vec<(CellIndex, &mut CellValue)> {
+        let row_n = self.row_n;
+        self.cells
+            .iter_mut()
+            .enumerate()
+            .map(|(index, cell)| ((index, row_n), cell))
             .collect()
     }
 }
@@ -211,19 +214,15 @@ impl<'a> Deref for House<'a> {
 }
 
 impl SudokuCorrectness for House<'_> {
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)> {
         self.cells
             .iter()
             .enumerate()
             .map(|(row_n, &row)| {
                 let true_row = self.house_first_y + row_n;
-                row.iter().enumerate().filter_map(move |(col_n, cell)| {
-                    if let Some(val) = cell.as_value() {
-                        let true_col = self.house_first_x + col_n;
-                        Some(((true_col, true_row), val))
-                    } else {
-                        None
-                    }
+                row.iter().enumerate().map(move |(col_n, cell)| {
+                    let true_col = self.house_first_x + col_n;
+                    ((true_col, true_row), cell)
                 })
             })
             .flatten()
@@ -291,7 +290,7 @@ impl<'a> IndexMut<usize> for HouseMut<'a> {
 }
 
 impl SudokuCorrectness for HouseMut<'_> {
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)> {
         self.board
             .cells
             .iter()
@@ -304,13 +303,36 @@ impl SudokuCorrectness for HouseMut<'_> {
                     .skip(self.house_first_x) // skip to the first in the row
                     .take(3) // only take 3
                     .enumerate()
-                    .filter_map(move |(col_n, cell)| {
-                        if let Some(val) = cell.as_value() {
-                            let true_col = self.house_first_x + col_n;
-                            Some(((true_col, true_row), val))
-                        } else {
-                            None
-                        }
+                    .map(move |(col_n, cell)| {
+                        let true_col = self.house_first_x + col_n;
+                        ((true_col, true_row), cell)
+                    })
+            })
+            .flatten()
+            .collect()
+    }
+}
+
+impl SudokuCorrectnessMut for HouseMut<'_> {
+    fn indices_and_cells_mut(&mut self) -> Vec<(CellIndex, &mut CellValue)> {
+        let house_first_y = self.house_first_y;
+        let house_first_x = self.house_first_x;
+        self.board
+            .cells
+            .iter_mut()
+            .skip(self.house_first_y) // skip to the first in the house
+            .take(3) // only take 3
+            .enumerate()
+            .map(|(row_n, row)| {
+                let true_row = house_first_y + row_n;
+
+                row.iter_mut()
+                    .skip(house_first_x) // skip to the first in the row
+                    .take(3) // only take 3
+                    .enumerate()
+                    .map(move |(col_n, cell)| {
+                        let true_col = house_first_x + col_n;
+                        ((true_col, true_row), cell)
                     })
             })
             .flatten()
@@ -364,12 +386,10 @@ impl CellValue {
     /// If this cell is this value or it's set to may be this value.
     pub fn is_or_maybe(&self, val: u8) -> bool {
         match self {
-            CellValue::Preset(v) => { *v == val }
-            CellValue::Value(v) => { *v == val }
-            CellValue::Notes { status } => {
-                status[(val - 1) as usize] == Some(NoteStatus::Maybe)
-            }
-            CellValue::Empty => { false }
+            CellValue::Preset(v) => *v == val,
+            CellValue::Value(v) => *v == val,
+            CellValue::Notes { status } => status[(val - 1) as usize] == Some(NoteStatus::Maybe),
+            CellValue::Empty => false,
         }
     }
 }
@@ -407,7 +427,9 @@ impl GameBoard {
         &self.cells[ind.1][ind.0]
     }
 
-    /// Set cell value
+    /// Set cell value.
+    ///
+    /// Returns whether a change was made.
     pub fn set(&mut self, ind: (usize, usize), mode: &NoteMode, val: u8) {
         let ref mut cell = self.cells[ind.1][ind.0];
         if let CellValue::Preset(_) = cell {
@@ -445,6 +467,7 @@ impl GameBoard {
                         }
                     }
                 }
+
             }
             NoteMode::Maybe => match cell {
                 CellValue::Preset(_) => {}
@@ -741,32 +764,20 @@ impl GameBoard {
     /// or being empty
     ///
     /// [CellIndex]: crate::game_board::CellIndex
-    pub fn iter_unset(&self) -> impl IntoIterator<Item=CellIndex> {
-
-        let vector: Vec<_> = (0usize..9).into_iter()
-            .flat_map(
-                move |row|
-                (0usize..9).into_iter()
-                    .filter_map(
-                        move |col| {
-                            let index = (col, row);
-                            match &self[index] {
-                                CellValue::Preset(_) => {
-                                    None
-                                }
-                                CellValue::Value(_) => {
-                                    None
-                                }
-                                CellValue::Notes { .. } => {
-                                    Some(index)
-                                }
-                                CellValue::Empty => {
-                                    Some(index)
-                                }
-                            }
-                        }
-                    )
-            )
+    pub fn iter_unset(&self) -> impl IntoIterator<Item = CellIndex> {
+        let vector: Vec<_> = (0usize..9)
+            .into_iter()
+            .flat_map(move |row| {
+                (0usize..9).into_iter().filter_map(move |col| {
+                    let index = (col, row);
+                    match &self[index] {
+                        CellValue::Preset(_) => None,
+                        CellValue::Value(_) => None,
+                        CellValue::Notes { .. } => Some(index),
+                        CellValue::Empty => Some(index),
+                    }
+                })
+            })
             .collect();
         vector
     }
@@ -808,11 +819,15 @@ impl SudokuCorrectness for GameBoard {
         true
     }
 
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
-        self.rows()
-            .into_iter()
-            .flat_map(|row| row.indices_and_values())
-            .collect()
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)> {
+        let mut ret = vec![];
+        for j in 0..9 {
+            for i in 0..9 {
+                let cell = &self[j][i];
+                ret.push(((i, j), cell))
+            }
+        }
+        ret
     }
 }
 

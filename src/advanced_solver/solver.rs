@@ -16,7 +16,7 @@ pub enum Difficulty {
     /// Expert
     Expert = 3,
     /// Pro
-    Pro = 4
+    Pro = 4,
 }
 
 impl From<u64> for Difficulty {
@@ -27,7 +27,7 @@ impl From<u64> for Difficulty {
             1000..=1999 => Medium,
             2000..=2999 => Hard,
             3000..=3999 => Expert,
-            _ => Pro
+            _ => Pro,
         }
     }
 }
@@ -41,13 +41,13 @@ pub struct Solution {
     /// The difficulty of the solve
     pub difficulty: Difficulty,
     /// A list of moves made, listed as their (short, long) names
-    pub moves: Vec<(String, String)>
+    pub moves: Vec<(String, String)>,
 }
 
 /// A sudoku solver
 pub struct Solver {
     techniques: Vec<Box<dyn Technique>>,
-    timeout_duration: Duration
+    timeout_duration: Duration,
 }
 
 macro_rules! techniques {
@@ -60,19 +60,14 @@ impl Solver {
     /// Creates a new instance of the solver, that can timeout
     pub fn new(timeout: Duration) -> Self {
         let mut techniques: Vec<Box<dyn Technique>> =
-            techniques![
-                NakedSingle,
-                HiddenSingle,
-                NakedPair
-            ];
+            techniques![NakedSingle, HiddenSingle, NakedPair];
 
-        techniques.sort_by_key(
-            |technique|
-                technique.points()
-        );
+        techniques.sort_by_key(|technique| technique.points());
 
-
-        Solver { techniques, timeout_duration: timeout }
+        Solver {
+            techniques,
+            timeout_duration: timeout,
+        }
     }
 
     /// Attempts to solve the board using known techniques. Returns either the solution, or an
@@ -108,18 +103,14 @@ impl Solver {
         }
 
         if board.is_victory() {
-            Ok(
-                Solution {
-                    solved_board: board,
-                    points,
-                    difficulty: Difficulty::from(points),
-                    moves
-                }
-            )
+            Ok(Solution {
+                solved_board: board,
+                points,
+                difficulty: Difficulty::from(points),
+                moves,
+            })
         } else {
             Err(board)
         }
-
     }
-
 }

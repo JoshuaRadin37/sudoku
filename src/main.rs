@@ -10,7 +10,7 @@ extern crate serde;
 use clap::{App, Arg};
 use glutin_window::{GlutinWindow, OpenGL};
 use opengl_graphics::{Filter, GlGraphics, GlyphCache, TextureSettings};
-use piston::{event_loop::EventLoop, Events, EventSettings, RenderEvent, WindowSettings};
+use piston::{event_loop::EventLoop, EventSettings, Events, RenderEvent, WindowSettings};
 
 pub use game_board::*;
 pub use game_board_controller::GameBoardController;
@@ -19,15 +19,13 @@ pub use game_settings::GameSettings;
 
 use crate::game_creator::{ByteStringLoader, GameCreator, RandomLoader};
 
+pub mod advanced_solver;
 mod game_board;
 mod game_board_controller;
 mod game_board_view;
-mod game_settings;
 pub mod game_creator;
+mod game_settings;
 pub mod validity;
-pub mod advanced_solver;
-
-
 
 fn main() {
     let board: GameBoard;

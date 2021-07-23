@@ -1,18 +1,17 @@
 //! Create a game using a random number generator.
 
-
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::time::{Instant};
+use std::time::Instant;
 
-use rand::{Rng, SeedableRng, thread_rng};
 use rand::rngs::ThreadRng;
+use rand::{thread_rng, Rng, SeedableRng};
 use rand_pcg::Pcg64;
 
-use crate::{CellIndex, CellValue, GameBoard};
 use crate::game_board_controller::NoteMode;
 use crate::game_creator::GameCreator;
 use crate::validity::{can_be_completed, SudokuCorrectness};
+use crate::{CellIndex, CellValue, GameBoard};
 
 /// Contains a random generator to create a board
 pub struct RandomLoader<R: Rng> {

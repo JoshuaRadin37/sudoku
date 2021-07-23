@@ -1,8 +1,8 @@
 //! The naked single technique
 
 use crate::advanced_solver::techniques::Technique;
-use crate::{GameBoard, CellValue};
 use crate::game_board_controller::NoteMode;
+use crate::{CellValue, GameBoard};
 
 /// Detects a naked single
 pub struct NakedSingle;
@@ -13,7 +13,6 @@ impl Technique for NakedSingle {
     }
 
     fn apply_to(&self, game_board: &GameBoard) -> Result<GameBoard, ()> {
-
         for cell_index in game_board.iter_unset() {
             let cell = game_board.cell_value(cell_index);
             if let CellValue::Notes { .. } = cell {
@@ -37,4 +36,3 @@ impl Technique for NakedSingle {
         "nkds".to_string()
     }
 }
-

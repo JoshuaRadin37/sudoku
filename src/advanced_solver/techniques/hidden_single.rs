@@ -1,8 +1,8 @@
 //! The hidden single technique
 
 use crate::advanced_solver::techniques::Technique;
-use crate::{GameBoard, AffectedComponents};
 use crate::game_board_controller::NoteMode;
+use crate::{AffectedComponents, GameBoard};
 
 /// Detects a hidden single, where a cell isn't alone in a cell, but it's the only cell that can be
 /// that value in it's house, row, or column
@@ -24,35 +24,40 @@ impl Technique for HiddenSingle {
 
             let maybes = cell.maybe_values().unwrap();
             for maybe in maybes {
-
-                if row.iter()
+                if row
+                    .iter()
                     .map(|cell| if cell.is_or_maybe(maybe) { 1 } else { 0 })
-                    .sum::<usize>() == 1 {
-
+                    .sum::<usize>()
+                    == 1
+                {
                     let mut next = game_board.clone();
                     next.set(cell_index, &NoteMode::Value, maybe);
                     return Ok(next);
                 }
 
-                if column.iter()
+                if column
+                    .iter()
                     .map(|cell| if cell.is_or_maybe(maybe) { 1 } else { 0 })
-                    .sum::<usize>() == 1 {
-
+                    .sum::<usize>()
+                    == 1
+                {
                     let mut next = game_board.clone();
                     next.set(cell_index, &NoteMode::Value, maybe);
                     return Ok(next);
                 }
 
-
-                if house.iter()
+                if house
+                    .iter()
                     .flat_map(|row| row.iter())
                     .map(move |cell| if cell.is_or_maybe(maybe) { 1 } else { 0 })
-                    .sum::<usize>() == 1 {
+                    .sum::<usize>()
+                    == 1
+                {
                     let mut next = game_board.clone();
                     next.set(cell_index, &NoteMode::Value, maybe);
                     return Ok(next);
                 }
-                 /*
+                /*
 
 
 
@@ -66,8 +71,6 @@ impl Technique for HiddenSingle {
                 }
 
                   */
-
-
             }
         }
 

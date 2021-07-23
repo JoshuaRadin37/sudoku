@@ -44,7 +44,21 @@ pub trait SudokuCorrectness {
     }
 
     /// Gets the index and value for each FILLED cell
-    fn indices_and_values(&self) -> Vec<(CellIndex, u8)>;
+    fn indices_and_values(&self) -> Vec<(CellIndex, u8)> {
+        self.indices_and_cells()
+            .into_iter()
+            .filter_map(|(index, cell)| cell.as_value().map(|value| (index, value)))
+            .collect()
+    }
+
+    /// Gets the index and value for each cell
+    fn indices_and_cells(&self) -> Vec<(CellIndex, &CellValue)>;
+}
+
+/// Allows for iterating through the indices and values that are mutable
+pub trait SudokuCorrectnessMut: SudokuCorrectness {
+    /// Gets the index and value for each cell
+    fn indices_and_cells_mut(&mut self) -> Vec<(CellIndex, &mut CellValue)>;
 }
 
 /// Maximum solution set size before solver automatically stops
