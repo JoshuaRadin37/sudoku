@@ -7,10 +7,12 @@ extern crate bitfield;
 #[macro_use]
 extern crate serde;
 
+use std::str::FromStr;
+
 use clap::{App, Arg};
 use glutin_window::{GlutinWindow, OpenGL};
 use opengl_graphics::{Filter, GlGraphics, GlyphCache, TextureSettings};
-use piston::{event_loop::EventLoop, EventSettings, Events, RenderEvent, WindowSettings};
+use piston::{event_loop::EventLoop, Events, EventSettings, RenderEvent, WindowSettings};
 
 pub use game_board::*;
 pub use game_board_controller::GameBoardController;
@@ -47,6 +49,13 @@ fn main() {
                 .max_values(1)
                 .conflicts_with_all(&["byte_string"]),
         )
+        .arg(
+            Arg::with_name("cells")
+                .help("Set the number of starting filled cells")
+                .long("cells")
+                .takes_value(true)
+                .requires("random"),
+        )
         .get_matches();
 
     if let Some(byte_string) = app.value_of("byte_string") {
@@ -55,16 +64,27 @@ fn main() {
             .into_game()
             .expect("Could not create game from byte string");
     } else if app.is_present("random") {
+        let starting = if let Some(starting) = app.value_of("cells") {
+            Some(usize::from_str(starting).expect("Starting cells count must be an integer"))
+        } else {
+            None
+        };
         board = match app.value_of("random") {
             Some(v) => {
-                let num: u64 = v.parse().expect("Give seed is not an integer");
-                RandomLoader::from_seed(num)
-                    .into_game()
-                    .expect("Could not create a random game")
+                let num: u64 = v.parse().expect("Given seed is not an integer");
+                let mut loader = RandomLoader::from_seed(num);
+                if let Some(starting) = starting {
+                    loader.num_starting_cells = starting;
+                }
+                loader.into_game().expect("Could not create a random game")
             }
-            None => RandomLoader::new()
-                .into_game()
-                .expect("Could not create a random game"),
+            None => {
+                let mut loader = RandomLoader::new();
+                if let Some(starting) = starting {
+                    loader.num_starting_cells = starting;
+                }
+                loader.into_game().expect("Could not create a random game")
+            }
         };
     } else {
         board = GameBoard::new();

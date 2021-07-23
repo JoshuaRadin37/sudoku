@@ -467,7 +467,6 @@ impl GameBoard {
                         }
                     }
                 }
-
             }
             NoteMode::Maybe => match cell {
                 CellValue::Preset(_) => {}

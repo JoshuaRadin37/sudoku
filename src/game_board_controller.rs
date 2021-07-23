@@ -89,6 +89,14 @@ impl GameBoardController {
                     match solver.solve(&self.game_board) {
                         Ok(solution) => {
                             println!("Solution found. Points = {}", solution.points);
+                            println!(
+                                "Techniques used: {:#?}",
+                                solution
+                                    .moves
+                                    .into_iter()
+                                    .map(|(_, long)| long)
+                                    .collect::<Vec<_>>()
+                            );
                             self.game_board = solution.solved_board;
                         }
                         Err(board) => {

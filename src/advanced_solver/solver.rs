@@ -60,7 +60,7 @@ impl Solver {
     /// Creates a new instance of the solver, that can timeout
     pub fn new(timeout: Duration) -> Self {
         let mut techniques: Vec<Box<dyn Technique>> =
-            techniques![NakedSingle, HiddenSingle, NakedPair];
+            techniques![NakedSingle, HiddenSingle, NakedPair, HiddenPair];
 
         techniques.sort_by_key(|technique| technique.points());
 

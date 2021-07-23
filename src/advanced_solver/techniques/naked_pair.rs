@@ -1,10 +1,11 @@
 //! The naked pair technique
 
-use crate::advanced_solver::techniques::Technique;
-use crate::validity::{SudokuCorrectness, SudokuCorrectnessMut};
-use crate::{AffectedComponentsMut, CellIndex, CellValue, GameBoard, AffectedComponents};
 use std::collections::HashMap;
+
+use crate::advanced_solver::techniques::Technique;
 use crate::game_board_controller::NoteMode;
+use crate::validity::SudokuCorrectness;
+use crate::{AffectedComponents, CellIndex, CellValue, GameBoard};
 
 /// Detects a naked pair
 pub struct NakedPair;
@@ -39,29 +40,45 @@ impl NakedPair {
     }
 
     /// Enforces a pair in a row
-    pub fn enforce_row_pair(&self, pair: (CellIndex, CellIndex), board: &GameBoard) -> Option<GameBoard> {
+    pub fn enforce_row_pair(
+        &self,
+        pair: (CellIndex, CellIndex),
+        board: &GameBoard,
+    ) -> Option<GameBoard> {
         let affected_row = AffectedComponents::new(&board, pair.0).row();
 
         self.enforce(pair, board, affected_row)
     }
 
     /// Enforces a pair in a column
-    pub fn enforce_column_pair(&self, pair: (CellIndex, CellIndex), board: &GameBoard) -> Option<GameBoard> {
+    pub fn enforce_column_pair(
+        &self,
+        pair: (CellIndex, CellIndex),
+        board: &GameBoard,
+    ) -> Option<GameBoard> {
         let affected_col = AffectedComponents::new(&board, pair.0).column();
 
         self.enforce(pair, board, affected_col)
     }
 
     /// Enforces a pair in a house
-    pub fn enforce_house_pair(&self, pair: (CellIndex, CellIndex), board: &GameBoard) -> Option<GameBoard> {
+    pub fn enforce_house_pair(
+        &self,
+        pair: (CellIndex, CellIndex),
+        board: &GameBoard,
+    ) -> Option<GameBoard> {
         let affected_house = AffectedComponents::new(&board, pair.0).house();
 
         self.enforce(pair, board, affected_house)
     }
 
-
     /// Enforces a generic pair for sudoku
-    pub fn enforce<S : SudokuCorrectness>(&self, pair: (CellIndex, CellIndex), board: &GameBoard, comp: S) -> Option<GameBoard> {
+    pub fn enforce<S: SudokuCorrectness>(
+        &self,
+        pair: (CellIndex, CellIndex),
+        board: &GameBoard,
+        comp: S,
+    ) -> Option<GameBoard> {
         let mut next_board = board.clone();
         let values = board[pair.0].maybe_values().unwrap();
         let mut changed = false;

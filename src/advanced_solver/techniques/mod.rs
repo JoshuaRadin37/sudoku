@@ -27,6 +27,7 @@ pub trait Technique {
     fn short_name(&self) -> String;
 }
 
+
 mod naked_single;
 pub use naked_single::NakedSingle;
 
@@ -35,3 +36,6 @@ pub use hidden_single::HiddenSingle;
 
 mod naked_pair;
 pub use naked_pair::NakedPair;
+
+mod hidden_pair;
+pub use hidden_pair::HiddenPair;
