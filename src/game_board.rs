@@ -5,6 +5,7 @@ use crate::validity::{SolutionsTree, SudokuCorrectness, SudokuCorrectnessMut};
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::fmt::{Debug, Formatter};
 
 /// The size of the game board
 pub const SIZE: usize = 9;
@@ -740,9 +741,15 @@ impl GameBoard {
         self.is_valid() && self.is_complete()
     }
 
-    /// Returns a solutions tree for the given board
+    /// Returns a solutions tree for the given board that can timeout if it detects the solutions space
+    /// is too big
     pub fn solutions(&self) -> Option<SolutionsTree> {
         SolutionsTree::solve(self)
+    }
+
+    /// Returns a solutions tree for the given board
+    pub fn force_solutions(&self) -> Option<SolutionsTree> {
+        SolutionsTree::force_solve(self)
     }
 
     pub(crate) fn swap_rows(&mut self, row1: usize, row2: usize) {
@@ -872,6 +879,31 @@ impl<'a> IntoIterator for &'a GameBoard {
         }
 
         ret.into_iter()
+    }
+}
+
+impl Debug for GameBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if f.alternate() {
+            writeln!(f, "+{}+", "-".repeat(17))?;
+            for (index, row) in self.rows().into_iter().enumerate() {
+                if index > 0 && index % 3 == 0 {
+                    writeln!(f, "+{}+", "-".repeat(17))?;
+                }
+                let vector: Vec<String> =
+                row.indices_and_cells()
+                    .into_iter()
+                    .map(|(_, val)| {
+                        val.as_value().map(|v| format!("{}", v)).unwrap_or(" ".to_string())
+                    })
+                    .collect();
+                writeln!(f, "|{}|{}|{}|", vector[0..3].join(" "), vector[3..6].join(" "), vector[6..9].join(" "))?;
+
+            }
+            writeln!(f, "+{}+", "-".repeat(17))
+        } else {
+            write!(f, "{:?}", self.cells)
+        }
     }
 }
 

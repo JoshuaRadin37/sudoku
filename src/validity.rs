@@ -85,6 +85,11 @@ impl SolutionsTree {
         }
     }
 
+    /// Creates a tree and never stops
+    pub fn force_solve(board: &GameBoard) -> Option<Self> {
+        Node::force_solve(board).map(|head| Self { head })
+    }
+
     /// Gets the number of solutions
     pub fn num_solutions(&self) -> usize {
         self.head.leaves()
@@ -115,8 +120,8 @@ impl Node {
         Node { board, node_type }
     }
 
-    fn solve_helper(board: &GameBoard, counter: &mut usize, instant: Instant) -> Option<Self> {
-        if *counter >= MAX_SOLUTION_SIZE || instant.elapsed() >= SOLVER_TIMEOUT_TIME {
+    fn solve_helper(board: &GameBoard, counter: &mut usize, instant: Instant, max_solution_size: usize, timeout_time: Duration) -> Option<Self> {
+        if *counter >= max_solution_size || instant.elapsed() >= timeout_time {
             return None;
         }
 
@@ -144,11 +149,11 @@ impl Node {
                     let mut next = board.clone();
                     next[cell_index] = CellValue::Value(val);
                     if next.is_valid() {
-                        if let Some(child) = Node::solve_helper(&next, counter, instant) {
+                        if let Some(child) = Node::solve_helper(&next, counter, instant, max_solution_size, timeout_time) {
                             map.insert(val, child);
                         }
                     }
-                    if *counter >= MAX_SOLUTION_SIZE || instant.elapsed() >= SOLVER_TIMEOUT_TIME {
+                    if *counter >= max_solution_size || instant.elapsed() >= timeout_time {
                         break;
                     }
                 }
@@ -176,7 +181,12 @@ impl Node {
     }
 
     fn solve(board: &GameBoard, counter: &mut usize) -> Option<Self> {
-        Self::solve_helper(board, counter, Instant::now())
+        Self::solve_helper(board, counter, Instant::now(), MAX_SOLUTION_SIZE, SOLVER_TIMEOUT_TIME)
+    }
+
+    fn force_solve(board: &GameBoard) -> Option<Self> {
+        let mut counter = 0;
+        Self::solve_helper(board, &mut counter, Instant::now(), usize::MAX, Duration::MAX)
     }
 
     fn leaves(&self) -> usize {

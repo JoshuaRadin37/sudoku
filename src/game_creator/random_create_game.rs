@@ -2,7 +2,7 @@
 
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 use rand::rngs::ThreadRng;
 use rand::{thread_rng, Rng, SeedableRng};
@@ -12,6 +12,9 @@ use crate::game_board_controller::NoteMode;
 use crate::game_creator::GameCreator;
 use crate::validity::{can_be_completed, SudokuCorrectness};
 use crate::{CellIndex, CellValue, GameBoard};
+use crate::advanced_solver::Solver;
+use std::io::{stdout, Write};
+
 
 /// Contains a random generator to create a board
 pub struct RandomLoader<R: Rng> {
@@ -185,6 +188,11 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
 
         let mut buffer: Vec<CellIndex> = vec![];
 
+        print!("Find Cell 0: ");
+        stdout().flush();
+
+        let mut search_start = Instant::now();
+
         while cells_removed < (81 - self.num_starting_cells) {
             if available_cells.is_empty() {
                 break;
@@ -203,24 +211,46 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
             );
 
              */
-            if let Some(sol) = next.solutions() {
+
+
+
+            let mut cell_removed = false;
+            if let Some(sol) = next.force_solutions() {
                 if sol.num_solutions() == 1 {
-                    println!(
-                        "Cell Removal Progress: {:3.2}%",
-                        cells_removed as f64 / (81 - self.num_starting_cells) as f64 * 100.0
-                    );
-                    game_board = next;
-                    cells_removed += 1;
-                    available_cells.extend(buffer);
-                    buffer = vec![];
-                } else {
-                    buffer.push(index);
+
+                    let solver = Solver::new(Duration::from_secs(15));
+                    if let Ok(sol) = solver.solve(&game_board) {
+                        println!(" Found in {:.3} sec.", search_start.elapsed().as_secs_f64());
+                        search_start = Instant::now();
+                        println!(
+                            "Cell Removal Progress: {:3.2}% ({}/{})",
+                            cells_removed as f64 / (81 - self.num_starting_cells) as f64 * 100.0,
+                            cells_removed,
+                            81 - self.num_starting_cells
+                        );
+                        game_board = next;
+                        cells_removed += 1;
+                        available_cells.extend(buffer);
+                        buffer = vec![];
+                        cell_removed = true;
+                        println!("{:#?}", game_board);
+                        print!("Find Cell {}: ", cells_removed);
+                        stdout().flush();
+                    }
                 }
-            } else {
-                // println!("Failed");
+            }
+            if !cell_removed {
+                print!("|");
+                stdout().flush();
                 buffer.push(index);
             }
         }
+        println!();
+        println!(
+            "Cell Removal Progress: {:3.2}%",
+            cells_removed as f64 / (81 - self.num_starting_cells) as f64 * 100.0
+        );
+        println!("{:#?}", game_board);
         for cell in (0usize..9)
             .into_iter()
             .flat_map(move |i| (0usize..9).into_iter().map(move |j| (j, i)))

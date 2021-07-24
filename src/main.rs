@@ -58,6 +58,8 @@ fn main() {
         )
         .get_matches();
 
+
+
     if let Some(byte_string) = app.value_of("byte_string") {
         let loader = ByteStringLoader::from_string(byte_string);
         board = loader
@@ -108,6 +110,7 @@ fn main() {
     let mut controller = GameBoardController::new(board);
     let game_view_settings = GameBoardViewSettings::new();
     let board_view = GameBoardView::new(game_view_settings);
+
 
     while let Some(event) = events.next(&mut window) {
         controller.event(

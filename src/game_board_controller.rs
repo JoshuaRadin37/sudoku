@@ -74,7 +74,7 @@ impl GameBoardController {
                 Key::A => self.game_board.auto_note(),
                 Key::C => self.game_board.clear_notes(),
                 Key::S => {
-                    if let Some(solutions) = self.game_board.solutions() {
+                    if let Some(solutions) = self.game_board.force_solutions() {
                         println!("# of solutions: {}", solutions.num_solutions());
                         let solution = solutions.solution();
                         self.game_board = solution.clone();
