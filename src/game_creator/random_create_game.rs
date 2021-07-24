@@ -54,6 +54,26 @@ pub enum RandomCreatorError {
     CorruptedBoardIntractable,
 }
 
+fn sample_from_vec<'a, T, R : Rng>(vector: &'a Vec<T>, rng: &mut R) -> Option<&'a T> {
+    let len = vector.len();
+    if len == 0 {
+        return None;
+    }
+
+    let index = rng.gen_range(0..len);
+    vector.get(index)
+}
+
+fn take_from_vec<T, R : Rng>(vector: &mut Vec<T>, rng: &mut R) -> Option<T> {
+    let len = vector.len();
+    if len == 0 {
+        return None;
+    }
+
+    let index = rng.gen_range(0..len);
+    Some(vector.remove(index))
+}
+
 impl Display for RandomCreatorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -83,6 +103,7 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
         let mut game_board = GameBoard::new();
         game_board.auto_note(); // create all notes
 
+
         let mut available_cells: Vec<CellIndex> = (0..9)
             .into_iter()
             .flat_map(move |i| (0..9).into_iter().map(move |j| (j, i)))
@@ -92,8 +113,8 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
 
         let start_initial_board_start = Instant::now();
         while game_board.is_valid() && !game_board.is_complete() {
-            let next_index = self.rng.gen_range(0..(available_cells.len()));
-            let next_cell = available_cells.remove(next_index);
+            game_board.auto_note();
+            let next_cell = available_cells.pop().unwrap();
 
             let cell = game_board[next_cell];
             if let CellValue::Notes { status: _ } = cell {
@@ -105,8 +126,8 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
                 }
 
                 print!("Maybe values for {:?}: {:?}", next_cell, maybe_values);
-                let index = self.rng.gen_range(0..maybe_values.len());
-                let value = maybe_values[index];
+
+                let value = *sample_from_vec(&maybe_values, &mut self.rng).unwrap();
 
                 let next_move = RandomMove(next_cell, value);
 
@@ -189,9 +210,10 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
         let mut buffer: Vec<CellIndex> = vec![];
 
         print!("Find Cell 0: ");
-        stdout().flush();
+        stdout().flush().unwrap();
 
         let mut search_start = Instant::now();
+        let solution = game_board.clone();
 
         while cells_removed < (81 - self.num_starting_cells) {
             if available_cells.is_empty() {
@@ -201,23 +223,35 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
             let index = available_cells.remove(next_index);
 
             let mut next = game_board.clone();
+            let value = next[index].as_value().unwrap();
 
             next.reset(index);
 
+            if next.try_solve_restricted(index, value).is_none() {
+                println!(" Found in {:.3} sec.", search_start.elapsed().as_secs_f64());
+                search_start = Instant::now();
+                println!(
+                    "Cell Removal Progress: {:3.2}% ({}/{})",
+                    cells_removed as f64 / (81 - self.num_starting_cells) as f64 * 100.0,
+                    cells_removed,
+                    81 - self.num_starting_cells
+                );
+                game_board = next;
+                cells_removed += 1;
+                available_cells.extend(buffer);
+                buffer = vec![];
+            } else {
+                print!("|");
+                stdout().flush().unwrap();
+                buffer.push(index);
+            }
+
+
+
             /*
-            println!(
-                "Attempting to remove {:?}",
-                index
-            );
-
-             */
-
-
-
-            let mut cell_removed = false;
             if let Some(sol) = next.force_solutions() {
                 if sol.num_solutions() == 1 {
-
+                    /*
                     let solver = Solver::new(Duration::from_secs(15));
                     if let Ok(sol) = solver.solve(&game_board) {
                         println!(" Found in {:.3} sec.", search_start.elapsed().as_secs_f64());
@@ -235,15 +269,14 @@ impl<R: Rng> GameCreator for RandomLoader<R> {
                         cell_removed = true;
                         println!("{:#?}", game_board);
                         print!("Find Cell {}: ", cells_removed);
-                        stdout().flush();
+                        stdout().flush().unwrap();
                     }
+
+                     */
                 }
             }
-            if !cell_removed {
-                print!("|");
-                stdout().flush();
-                buffer.push(index);
-            }
+
+             */
         }
         println!();
         println!(

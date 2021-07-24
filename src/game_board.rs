@@ -2,7 +2,7 @@
 
 use crate::game_board_controller::NoteMode;
 use crate::validity::{SolutionsTree, SudokuCorrectness, SudokuCorrectnessMut};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::fmt::{Debug, Formatter};
@@ -393,6 +393,22 @@ impl CellValue {
             CellValue::Empty => false,
         }
     }
+
+    /// Gets the values that cell can't be
+    fn denied_values(&self) -> Option<Vec<u8>> {
+        match self {
+            CellValue::Notes { status } => {
+                let mut ret = vec![];
+                for val_status in status.iter().enumerate().map(|(i, s)| (i as u8 + 1, s)) {
+                    if let (val, Some(NoteStatus::Deny)) = val_status {
+                        ret.push(val);
+                    }
+                }
+                Some(ret)
+            }
+            _ => None,
+        }
+    }
 }
 
 /// Whether or not this note is number is maybe or deny
@@ -672,8 +688,6 @@ impl GameBoard {
 
     /// Automatically fully notes the game board
     pub fn auto_note(&mut self) {
-        self.clear_notes();
-
         for row in 0usize..9 {
             for column in 0usize..9 {
                 if !self.is_valid() {
@@ -682,6 +696,8 @@ impl GameBoard {
                 let cell_index = (column, row);
                 if let None = self.cell_value(cell_index).as_value() {
                     let mut valid: Vec<u8> = vec![];
+                    let denies: Vec<u8> = self.cell_value(cell_index).denied_values().into_iter().flatten().collect();
+                    let maybes: Vec<u8> = self.cell_value(cell_index).maybe_values().into_iter().flatten().collect();
                     for val in 1u8..=9 {
                         let old = self.cells[row][column];
                         self.cells[row][column] = CellValue::Value(val);
@@ -694,6 +710,10 @@ impl GameBoard {
                         }
                         self.cells[row][column] = old;
                     }
+                    //println!("Valid: {:?}", valid);
+                    valid.retain(|val| !denies.contains(val));
+                    valid.retain(|val| !maybes.contains(val));
+                    //println!("Valid after denied:  {:?}", valid);
                     for value in valid {
                         self.set(cell_index, &NoteMode::Maybe, value);
                     }
@@ -750,6 +770,11 @@ impl GameBoard {
     /// Returns a solutions tree for the given board
     pub fn force_solutions(&self) -> Option<SolutionsTree> {
         SolutionsTree::force_solve(self)
+    }
+
+    /// Returns a solution tree if and only if there's a way to solve the board such that one restriction is met
+    pub fn try_solve_restricted(&self, cell_index: CellIndex, val: u8)  -> Option<SolutionsTree>{
+        SolutionsTree::try_solve(self, cell_index, val)
     }
 
     pub(crate) fn swap_rows(&mut self, row1: usize, row2: usize) {
@@ -890,13 +915,18 @@ impl Debug for GameBoard {
                 if index > 0 && index % 3 == 0 {
                     writeln!(f, "+{}+", "-".repeat(17))?;
                 }
+                let mut to_add = HashMap::new();
                 let vector: Vec<String> =
                 row.indices_and_cells()
                     .into_iter()
-                    .map(|(_, val)| {
+                    .map(|(index, val)| {
+                        if let CellValue::Notes { status } = val {
+                            to_add.insert(index, status);
+                        }
                         val.as_value().map(|v| format!("{}", v)).unwrap_or(" ".to_string())
                     })
                     .collect();
+
                 writeln!(f, "|{}|{}|{}|", vector[0..3].join(" "), vector[3..6].join(" "), vector[6..9].join(" "))?;
 
             }

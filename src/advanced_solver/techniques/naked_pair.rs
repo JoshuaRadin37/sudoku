@@ -18,9 +18,11 @@ impl NakedPair {
     where
         I: IntoIterator<Item = (CellIndex, &'a CellValue)>,
     {
+        //println!("Attempting to find naked pairs...");
         let mut pair_mapping: HashMap<_, Vec<_>> = HashMap::new();
         for (cell_index, value) in iter {
             if let Some(maybes) = value.maybe_values() {
+                //println!("Maybes: {:?}", maybes);
                 match maybes.as_slice() {
                     &[v1, v2] => {
                         pair_mapping.entry((v1, v2)).or_default().push(cell_index);
@@ -30,8 +32,10 @@ impl NakedPair {
             }
         }
 
+
         for (_key, indices) in pair_mapping {
             if let &[index1, index2] = indices.as_slice() {
+                //println!("found naked pair: {:?}", (index1, index2));
                 return Some((index1, index2));
             }
         }
@@ -88,8 +92,12 @@ impl NakedPair {
             .filter(|(index, _)| *index != pair.0 && *index != pair.1)
         {
             if let Some(maybes) = cell.maybe_values() {
-                if maybes.contains(&values[0]) || maybes.contains(&values[1]) {
+                if maybes.contains(&values[0]) {
                     next_board.set(index, &NoteMode::Deny, values[0]);
+                    changed = true;
+                }
+
+                if maybes.contains(&values[1]) {
                     next_board.set(index, &NoteMode::Deny, values[1]);
                     changed = true;
                 }

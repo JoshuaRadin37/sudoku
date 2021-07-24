@@ -90,6 +90,11 @@ impl SolutionsTree {
         Node::force_solve(board).map(|head| Self { head })
     }
 
+    /// Creates a tree and never stops, and sets restrictions for what values a cell can be
+    pub fn try_solve(board: &GameBoard, cell_index: CellIndex, value: u8) -> Option<Self> {
+        Node::try_solve(board, cell_index, value).map(|head| Self { head })
+    }
+
     /// Gets the number of solutions
     pub fn num_solutions(&self) -> usize {
         self.head.leaves()
@@ -189,6 +194,40 @@ impl Node {
         Self::solve_helper(board, &mut counter, Instant::now(), usize::MAX, Duration::MAX)
     }
 
+    fn try_solve(board: &GameBoard, cell_index: CellIndex, old_val: u8) -> Option<Self> {
+        // Iterate through all values 0 through 9
+        // Check if that value can be place. If so, create a new board with that filled and solve
+        // from there, add result to this present
+
+        let mut map = HashMap::new();
+
+        for val in 1..=9 {
+            if old_val == val {
+                continue;
+            }
+
+            let mut next = board.clone();
+            next[cell_index] = CellValue::Value(val);
+            if next.is_valid() {
+                if let Some(child) = Node::force_solve(&next) {
+                    map.insert(val, child);
+                }
+            }
+        }
+
+        if map.is_empty() {
+            None
+        } else {
+            let inner = NodeType::Branch {
+                next_cell: cell_index,
+                children: map,
+            };
+            Some(Node::new(board.clone(), inner))
+        }
+
+
+
+    }
     fn leaves(&self) -> usize {
         match self.node_type {
             NodeType::Leaf => 1,
